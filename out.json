@@ -1,0 +1,1 @@
+{"statusCode":200,"headers":{"Content-Type":"application/json","Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"OPTIONS,POST,GET"},"isBase64Encoded":false,"multiValueHeaders":{"X-Custom-Header":["My value","My other value"]},"body":"{\n  \"TotalCodeSize\": 760,\n  \"FunctionCount\": 1,\n  \"test\": \"hello\"\n}"}
