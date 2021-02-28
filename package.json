@@ -1,8 +1,12 @@
 {
-  "name": "nodejs-apig",
-  "version": "1.0.0",
-  "private": true,
-  "devDependencies": {
-    "aws-sdk": "2.631.0"
-  }
+	"name": "nodejs-apig",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"test": "jest"
+	},
+	"devDependencies": {
+		"aws-sdk": "2.631.0",
+		"jest": "^26.6.3"
+	}
 }
