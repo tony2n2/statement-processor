@@ -14,39 +14,72 @@ exports.handler = async function (event, context) {
 			out = parseCSV(parsedEvent.file.content);
 		} else if (parsedEvent.file.contentType === 'text/xml') {
 			out = parseXML(parsedEvent.file.content);
+		} else {
+			return formatError({ statusCode: 415, code: 415, message: 'Unsupported Media Type' });
 		}
-		return formatResponse(serialize(out));
+
+		const invalid = validateRecords(out);
+
+		if (Object.keys(invalid).length === 0) {
+			return formatResponse(serialize({ content: out }));
+		} else {
+			return formatResponse(serialize({ content: out, invalid }), 422);
+		}
 	} catch (error) {
 		return formatError(error);
 	}
 };
 
-var formatResponse = function (body) {
-	var response = {
-		statusCode: 200,
-		headers: {
-			'Content-Type': 'application/json',
-		},
+const validateRecords = function (records) {
+	// use bare js object as hashmap to detect duplicate reference
+	let map = Object.create(null),
+		invalid = Object.create(null);
+
+	records.forEach((rec) => {
+		// skip invalid record
+		if (rec[0] in invalid) {
+			return;
+		}
+
+		// check if reference is unique
+		if (rec[0] in map) {
+			invalid[rec[0]] = 'duplicate reference';
+			return;
+		}
+		map[rec[0]] = rec;
+
+		// check record balance
+		// record format: [Reference, Account Number, Description, Start Balance, Mutation, End Balance]
+		let startBalance = parseFloat(rec[3]),
+			mutation = parseFloat(rec[4]),
+			endBalance = parseFloat(rec[5]);
+		if (isNaN(startBalance) || isNaN(mutation) || isNaN(endBalance)) {
+			invalid[rec[0]] = 'invalid balance';
+			return;
+		}
+		if (Math.round(startBalance * 100) + Math.round(mutation * 100) !== Math.round(endBalance * 100)) {
+			invalid[rec[0]] = 'invalid balance';
+		}
+	});
+	return invalid;
+};
+
+var formatResponse = function (body, statusCode = 200) {
+	return {
+		statusCode,
+		headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
 		isBase64Encoded: false,
-		multiValueHeaders: {
-			'X-Custom-Header': ['My value', 'My other value'],
-		},
-		body: body,
+		body,
 	};
-	return response;
 };
 
 var formatError = function (error) {
-	var response = {
-		statusCode: error.statusCode,
-		headers: {
-			'Content-Type': 'text/plain',
-			'x-amzn-ErrorType': error.code,
-		},
+	return {
+		statusCode: error.statusCode || 500,
+		headers: { 'Content-Type': 'text/plain', 'x-amzn-ErrorType': error.code, 'Access-Control-Allow-Origin': '*' },
 		isBase64Encoded: false,
-		body: error.code + ': ' + error.message,
+		body: error.code + ': ' + (error.message || ' something went wrong'),
 	};
-	return response;
 };
 
 var serialize = function (object) {
